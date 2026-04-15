@@ -90,7 +90,7 @@ aws s3 sync ./frontend s3://$BUCKET_NAME/ \
 2. Click "Create distribution"
 3. Configure:
    - **Origin domain**: Select your S3 bucket
-   - **s3-bucket-access**: Create OAI (Origin Access Identity)
+   - **Origin access**: Use **OAC (Origin Access Control)** (recommended, modern replacement for OAI)
    - **Viewer protocol policy**: Redirect HTTP to HTTPS
    - **Allowed HTTP methods**: GET, HEAD, OPTIONS
    - **Caching**: Use cache behaviors for different file types
@@ -100,12 +100,6 @@ aws s3 sync ./frontend s3://$BUCKET_NAME/ \
 ### Option B: Using AWS CLI
 
 ```bash
-# Create OAI first
-OAI=$(aws cloudfront create-cloud-front-origin-access-identity \
-    --cloud-front-origin-access-identity-config CallerReference=$(date +%s),Comment="Nyay Setu OAI" \
-    --query 'CloudFrontOriginAccessIdentity.Id' \
-    --output text)
-
 # Create distribution config
 cat > cf-config.json <<'EOF'
 {
@@ -117,7 +111,7 @@ cat > cf-config.json <<'EOF'
                 "Id": "S3Origin",
                 "DomainName": "BUCKET_NAME.s3.ap-south-1.amazonaws.com",
                 "S3OriginConfig": {
-                    "OriginAccessIdentity": "origin-access-identity/cloudfront/EXXXXX"
+                    "OriginAccessIdentity": ""
                 }
             }
         ],
@@ -133,41 +127,44 @@ cat > cf-config.json <<'EOF'
         "CachePolicyId": "658327ea-f89d-4fab-a63d-7e88639e58f6",
         "Compress": true
     },
-    "CacheBehaviors": [
-        {
-            "PathPattern": "*.html",
-            "TargetOriginId": "S3Origin",
-            "ViewerProtocolPolicy": "redirect-to-https",
-            "AllowedMethods": {
-                "Quantity": 2,
-                "Items": ["GET", "HEAD"]
+    "CacheBehaviors": {
+        "Quantity": 3,
+        "Items": [
+            {
+                "PathPattern": "*.html",
+                "TargetOriginId": "S3Origin",
+                "ViewerProtocolPolicy": "redirect-to-https",
+                "AllowedMethods": {
+                    "Quantity": 2,
+                    "Items": ["GET", "HEAD"]
+                },
+                "CachePolicyId": "4135ea2d-6df8-44a3-9df3-4b5a84be39ad",
+                "Compress": true
             },
-            "CachePolicyId": "4135ea3d-c35d-46eb-81d7-reeSJmXQQEE",
-            "Compress": true
-        },
-        {
-            "PathPattern": "*.js",
-            "TargetOriginId": "S3Origin",
-            "ViewerProtocolPolicy": "redirect-to-https",
-            "AllowedMethods": {
-                "Quantity": 2,
-                "Items": ["GET", "HEAD"]
+            {
+                "PathPattern": "*.js",
+                "TargetOriginId": "S3Origin",
+                "ViewerProtocolPolicy": "redirect-to-https",
+                "AllowedMethods": {
+                    "Quantity": 2,
+                    "Items": ["GET", "HEAD"]
+                },
+                "CachePolicyId": "658327ea-f89d-4fab-a63d-7e88639e58f6",
+                "Compress": true
             },
-            "CachePolicyId": "658327ea-f89d-4fab-a63d-7e88639e58f6",
-            "Compress": true
-        },
-        {
-            "PathPattern": "*.css",
-            "TargetOriginId": "S3Origin",
-            "ViewerProtocolPolicy": "redirect-to-https",
-            "AllowedMethods": {
-                "Quantity": 2,
-                "Items": ["GET", "HEAD"]
-            },
-            "CachePolicyId": "658327ea-f89d-4fab-a63d-7e88639e58f6",
-            "Compress": true
-        }
-    ],
+            {
+                "PathPattern": "*.css",
+                "TargetOriginId": "S3Origin",
+                "ViewerProtocolPolicy": "redirect-to-https",
+                "AllowedMethods": {
+                    "Quantity": 2,
+                    "Items": ["GET", "HEAD"]
+                },
+                "CachePolicyId": "658327ea-f89d-4fab-a63d-7e88639e58f6",
+                "Compress": true
+            }
+        ]
+    },
     "CustomErrorResponses": [
         {
             "ErrorCode": 404,
@@ -230,7 +227,7 @@ aws route53 change-resource-record-sets \
 ## Step 6: Configure Cache Settings
 
 ### HTML Files (No Cache)
-- Cached: 5 minutes
+- Cache-Control: no-store, no-cache, must-revalidate
 - Query string forwarding: None
 - Compress: Yes
 
@@ -331,7 +328,7 @@ aws s3api list-object-versions \
 
 # 2. Copy previous version
 aws s3api copy-object \
-    --copy-source $BUCKET_NAME/VERSION_ID/index.html \
+    --copy-source "$BUCKET_NAME/index.html?versionId=VERSION_ID" \
     --bucket $BUCKET_NAME \
     --key index.html
 
@@ -344,7 +341,7 @@ aws cloudfront create-invalidation \
 ## Troubleshooting
 
 ### Issue: Access Denied
-**Solution**: Check OAI is properly configured in bucket policy
+**Solution**: Check OAC/OAI permissions are correctly configured in bucket policy
 
 ### Issue: 404 Not Found
 **Solution**: Verify custom error response maps 404 to /index.html
@@ -363,7 +360,7 @@ aws cloudfront create-invalidation \
 1. **Enable SSL/TLS**: Use ACM certificate for HTTPS
 2. **Block Public Access**: All bucket public access disabled
 3. **Version Control**: Enable S3 versioning for rollback capability
-4. **OAI**: Use CloudFront Origin Access Identity for S3 access
+4. **OAC Preferred**: Use CloudFront Origin Access Control (OAC) for S3 access (OAI is legacy)
 5. **WAF**: Consider CloudFront with AWS WAF for protection
 6. **Logging**: Enable CloudFront and S3 access logging
 7. **Encryption**: Use S3 default encryption and KMS keys

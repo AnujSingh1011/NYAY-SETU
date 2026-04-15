@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Citizen Dashboard</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+  <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+<div class="dashboard-layout">
+  <aside class="sidebar"><h4>Citizen Panel</h4><a class="active" href="/dashboard_citizen.html">Dashboard</a><a href="/submit_fir.html">Submit FIR</a><a href="/track_fir.html">Track FIR</a><a href="#" id="logoutBtn">Logout</a></aside>
+  <main class="dashboard-content">
+    <h2>Welcome, Citizen</h2>
+    <div class="kpi-grid mb-3">
+      <div class="stat-card"><h2 id="totalCount">0</h2><p>Total FIRs</p></div>
+      <div class="stat-card"><h2 id="activeCount">0</h2><p>Active</p></div>
+      <div class="stat-card"><h2 id="resolvedCount">0</h2><p>Resolved</p></div>
+      <div class="stat-card"><h2 id="escalatedCount">0</h2><p>Escalated</p></div>
+    </div>
+    <div class="row g-3">
+      <div class="col-lg-8">
+        <div class="table-card p-3">
+          <div class="d-flex justify-content-between align-items-center"><h5>My FIRs</h5><select class="form-select w-auto" id="statusFilter"><option value="">All</option><option>Filed</option><option>Under Investigation</option><option>Resolved</option></select></div>
+          <ul class="list-group mt-3" id="citizenFirList"></ul>
+        </div>
+      </div>
+      <div class="col-lg-4"><div class="table-card p-3"><h5>Notifications</h5><ul class="list-group"><li class="list-group-item">Officer assigned to FIR-2026-0001</li><li class="list-group-item">Evidence requested for FIR-2026-0002</li></ul></div></div>
+    </div>
+  </main>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>window.APP_CONFIG={API_BASE_URL:'http://localhost:8000/api',GOOGLE_MAPS_API_KEY:''};</script>
+<script src="/js/api-service.js"></script>
+<script>
+new SessionManager().start();
+logoutBtn.onclick=(e)=>{e.preventDefault();AuthManager.logout();};
+async function render(){
+  const {firs}=await apiService.getFIRs();
+  const st=statusFilter.value;
+  const list=firs.filter(f=>!st||f.status===st);
+  citizenFirList.innerHTML=list.map(f=>`<li class='list-group-item d-flex justify-content-between align-items-center'><span><strong>${f.id}</strong> - ${f.title}<br><small>${f.station}</small></span><span class='pill ${f.priority.toLowerCase()}'>${f.priority}</span></li>`).join('');
+  totalCount.textContent=firs.length;
+  activeCount.textContent=firs.filter(f=>f.status!=='Resolved').length;
+  resolvedCount.textContent=firs.filter(f=>f.status==='Resolved').length;
+  escalatedCount.textContent=firs.filter(f=>f.priority==='High').length;
+}
+statusFilter.onchange=render;render();
+</script>
+</body>
+</html>
