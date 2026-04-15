@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:80"
+    environment:
+      - REACT_APP_API_BASE_URL=http://localhost:8000/api
+      - REACT_APP_GOOGLE_MAPS_API_KEY=${GOOGLE_MAPS_API_KEY}
+    volumes:
+      - ./frontend:/usr/share/nginx/html:ro
+    restart: unless-stopped
+    networks:
+      - nyay-setu
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 40s
+
+  # Optional: Backend service (uncomment when ready)
+  # backend:
+  #   build:
+  #     context: ./backend
+  #     dockerfile: Dockerfile
+  #   ports:
+  #     - "8000:8000"
+  #   environment:
+  #     - DEBUG=False
+  #     - ALLOWED_HOSTS=*
+  #     - DATABASE_URL=postgresql://postgres:password@db:5432/nyay_setu
+  #     - CORS_ALLOWED_ORIGINS=http://localhost:3000
+  #   depends_on:
+  #     - db
+  #   networks:
+  #     - nyay-setu
+  #   restart: unless-stopped
+
+  # Optional: Database service (uncomment when ready)
+  # db:
+  #   image: postgres:15-alpine
+  #   environment:
+  #     - POSTGRES_DB=nyay_setu
+  #     - POSTGRES_USER=postgres
+  #     - POSTGRES_PASSWORD=password
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #   networks:
+  #     - nyay-setu
+  #   restart: unless-stopped
+
+networks:
+  nyay-setu:
+    driver: bridge
+
+# volumes:
+#   postgres_data:
