@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Senior Officer Dashboard</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+  <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+<div class="dashboard-layout">
+  <aside class="sidebar"><h4>Senior Officer</h4><a class="active" href="/dashboard_senior.html">Escalations</a><a href="#" id="logoutBtn">Logout</a></aside>
+  <main class="dashboard-content">
+    <h2>Escalations & Delayed Investigations</h2>
+    <div class="row g-3">
+      <div class="col-lg-6"><div class="table-card p-3"><h5>Escalated/High Priority</h5><ul class="list-group" id="seniorEscList"></ul></div></div>
+      <div class="col-lg-6"><div class="table-card p-3"><h5>Activity Logs</h5><ul class="list-group" id="seniorLogList"></ul></div></div>
+    </div>
+  </main>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>window.APP_CONFIG={API_BASE_URL:'http://localhost:8000/api',GOOGLE_MAPS_API_KEY:''};</script>
+<script src="/js/api-service.js"></script>
+<script>
+new SessionManager().start();
+logoutBtn.onclick=(e)=>{e.preventDefault();AuthManager.logout();};
+(async()=>{
+  const firs=(await apiService.getFIRs()).firs.filter(f=>f.priority==='High'||f.status==='Under Investigation');
+  seniorEscList.innerHTML=firs.map(f=>`<li class='list-group-item'><strong>${f.id}</strong> - ${f.title} <span class='badge bg-warning text-dark'>${f.status}</span></li>`).join('');
+  const logs=(await apiService.getActivityLogs()).logs;
+  seniorLogList.innerHTML=logs.slice(-10).reverse().map(l=>`<li class='list-group-item'><small>${new Date(l.at).toLocaleString()}</small><br>${l.action}</li>`).join('');
+})();
+</script>
+</body>
+</html>

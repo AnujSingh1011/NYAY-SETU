@@ -1,0 +1,43 @@
+name: Frontend CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  frontend-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build image
+        run: docker build -t nyay-setu-frontend ./frontend
+
+      - name: Run container
+        run: docker run -d --name nyay-setu -p 3000:80 nyay-setu-frontend
+
+      - name: Smoke test
+        run: |
+          sleep 5
+          curl -fsS http://localhost:3000/ | grep -q "Nyay Setu"
+
+      - name: Validate required HTML files
+        run: |
+          test -f frontend/index.html
+          test -f frontend/login.html
+          test -f frontend/register.html
+          test -f frontend/forgot-password.html
+          test -f frontend/dashboard_citizen.html
+          test -f frontend/dashboard_police.html
+          test -f frontend/dashboard_senior.html
+          test -f frontend/dashboard_admin.html
+          test -f frontend/submit_fir.html
+          test -f frontend/track_fir.html
+          test -f frontend/pages/dashboard_station_incharge.html
+
+      - name: Cleanup
+        if: always()
+        run: docker rm -f nyay-setu || true
